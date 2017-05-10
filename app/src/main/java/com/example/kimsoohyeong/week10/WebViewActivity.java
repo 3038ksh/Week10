@@ -23,13 +23,17 @@ import android.webkit.WebViewClient;
 import android.widget.Adapter;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
 public class WebViewActivity extends AppCompatActivity {
+    private static final String TAG = WebViewActivity.class.getSimpleName();
+    
     ListView listView;
     WebView webView;
     LinearLayout linear;
@@ -43,7 +47,6 @@ public class WebViewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_web_view);
-
         init();
     }
 
@@ -52,6 +55,7 @@ public class WebViewActivity extends AppCompatActivity {
         webView = (WebView)findViewById(R.id.webview);
         linear = (LinearLayout)findViewById(R.id.linear);
         et = (EditText)findViewById(R.id.et);
+
         adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, data);
         webView.addJavascriptInterface(new JavaScriptMethods(),
                 "MyApp");
@@ -82,6 +86,7 @@ public class WebViewActivity extends AppCompatActivity {
             }
         });
 
+
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
@@ -99,46 +104,68 @@ public class WebViewActivity extends AppCompatActivity {
         animTop = AnimationUtils.loadAnimation(this, R.anim.translate_top);
         animTop.setAnimationListener(new Animation.AnimationListener() {
             @Override
-            public void onAnimationStart(Animation animation) {
-
-            }
+            public void onAnimationStart(Animation animation) {}
 
             @Override
             public void onAnimationEnd(Animation animation) {
-                linear.setVisibility(View.GONE);
+                myHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        linear.setVisibility(View.GONE);
+                    }
+                });
             }
 
             @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
+            public void onAnimationRepeat(Animation animation) {}
         });
 
         animMid = AnimationUtils.loadAnimation(this, R.anim.translate_mid);
         animMid.setAnimationListener(new Animation.AnimationListener() {
             @Override
             public void onAnimationStart(Animation animation) {
-                linear.setVisibility(View.VISIBLE);
+                myHandler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        linear.setVisibility(View.VISIBLE);
+                    }
+                });
+
             }
 
             @Override
-            public void onAnimationEnd(Animation animation) {
-
-            }
+            public void onAnimationEnd(Animation animation) {}
 
             @Override
-            public void onAnimationRepeat(Animation animation) {
-
-            }
+            public void onAnimationRepeat(Animation animation) {}
         });
 
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 showWebView();
-                Log.d("DEBUG", "애니메이션 실행 콜");
+                Log.d(TAG, "애니메이션 실행 콜");
                 enableAnim();
                 webView.loadUrl(data.get(position).getUrl());
+            }
+        });
+
+        listView.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, final int position, long id) {
+                AlertDialog.Builder dlg = new AlertDialog.Builder(view.getContext());
+                dlg.setTitle("삭제");
+                dlg.setMessage("삭제하시겠습니까?");
+                dlg.setPositiveButton("예", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            data.remove(position);
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+                dlg.setNegativeButton("아니오", null);
+                dlg.show();
+                return true;
             }
         });
 
@@ -166,14 +193,14 @@ public class WebViewActivity extends AppCompatActivity {
     }
 
     private void showWebView() {
-        Log.d("DEBUG", "애니메이션 종료 콜");
+        Log.d(TAG, "애니메이션 종료 콜");
         disableAnim();
         listView.setVisibility(View.GONE);
         webView.setVisibility(View.VISIBLE);
     }
 
     private void showListView() {
-        Log.d("DEBUG", "애니메이션 종료 콜");
+        Log.d(TAG, "애니메이션 종료 콜");
         disableAnim();
         webView.setVisibility(View.GONE);
         listView.setVisibility(View.VISIBLE);
@@ -182,24 +209,23 @@ public class WebViewActivity extends AppCompatActivity {
     private void disableAnim() {
         if (isLinearShow) {
             isLinearShow = false;
-            Log.d("DEBUG", "애니메이션 종료됐음");
-            linear.setAnimation(animTop);
-            animTop.start();
+            Log.d(TAG, "애니메이션 종료됐음");
+            linear.startAnimation(animTop);
         }
     }
 
     private void enableAnim() {
         if (!isLinearShow) {
             isLinearShow = true;
-            Log.d("DEBUG", "애니메이션 실행됐음");
-            linear.setAnimation(animMid);
-            animMid.start();
+            Log.d(TAG, "애니메이션 실행됐음");
+            Log.d(TAG, "current Thread: " + Thread.currentThread());
+            linear.startAnimation(animMid);
         }
     }
 
     public void onClick(View v) {
         if (v.getId() == R.id.btn1) {
-            Log.d("DEBUG", et.getText().toString());
+            Log.d(TAG, et.getText().toString());
             webView.loadUrl(et.getText().toString());
         }
     }
@@ -238,11 +264,10 @@ public class WebViewActivity extends AppCompatActivity {
 
         @JavascriptInterface
         public void showAnim() {
-            Log.d("DEBUG", "애니메이션 실행 핸들러 콜");
+            Log.d(TAG, "애니메이션 실행 콜");
             myHandler.post(new Runnable() {
                 @Override
                 public void run() {
-                    Log.d("DEBUG", "애니메이션 실행 콜");
                     enableAnim();
                 }
             });
